@@ -1,0 +1,66 @@
+menu "U8G2 Configuration"
+
+	config GPIO_RANGE_MAX
+		int
+		default 33 if IDF_TARGET_ESP32
+		default 46 if IDF_TARGET_ESP32S2
+		default 48 if IDF_TARGET_ESP32S3
+		default 18 if IDF_TARGET_ESP32C2
+		default 19 if IDF_TARGET_ESP32C3
+		default 30 if IDF_TARGET_ESP32C6
+
+	config SCL_GPIO
+		int "SCL GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 22 if IDF_TARGET_ESP32
+		default 12 if IDF_TARGET_ESP32S2
+		default 12 if IDF_TARGET_ESP32S3
+		default  7 # C3 and others
+		help
+			GPIO number (IOxx) to I2C SCL.
+			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to I2C.
+			GPIOs 35-39 are input-only so cannot be used as outputs.
+
+	config SDA_GPIO
+		int "SDA GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 21 if IDF_TARGET_ESP32
+		default 11 if IDF_TARGET_ESP32S2
+		default 11 if IDF_TARGET_ESP32S3
+		default  6 # C3 and others
+		help
+			GPIO number (IOxx) to I2C SDA.
+			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to I2C.
+			GPIOs 35-39 are input-only so cannot be used as outputs.
+
+	config RESET_GPIO
+		int "RESET GPIO number"
+		range -1 GPIO_RANGE_MAX
+		default 15 if IDF_TARGET_ESP32
+		default 38 if IDF_TARGET_ESP32S2
+		default 38 if IDF_TARGET_ESP32S3
+		default -1 # C3 and others
+		help
+			GPIO number (IOxx) to RESET.
+			When it is -1, RESET isn't performed.
+			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to RESET.
+			GPIOs 35-39 are input-only so cannot be used as outputs.
+
+	choice I2C_PORT
+		prompt "I2C port that controls this bus"
+		default I2C_PORT_0
+		help
+			Select I2C port that controls this bus.
+		config I2C_PORT_0
+			bool "I2C_PORT_0"
+			help
+				Use I2C_PORT_0.
+		config I2C_PORT_1
+			depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+			bool "I2C_PORT_1"
+			help
+				Use I2C_PORT_1.
+	endchoice
+
+endmenu
+

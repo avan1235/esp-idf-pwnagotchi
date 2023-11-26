@@ -1,65 +1,78 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <esp_types.h>
+#include <nvs_flash.h>
+#include <memory.h>
+
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+
 #include "esp_log.h"
+#include "esp_event.h"
 
-#include "ssd1306.h"
+#include "wifi_controller.h"
+#include "../components/ui/interface/ui.h"
 
-#define tag "SSD1306"
+#include <driver/gpio.h>
+#include <driver/spi_master.h>
+#include <esp_log.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <stdio.h>
+#include <string.h>
+#include <u8g2.h>
 
-static void reset_screen(SSD1306_t *dev) {
-    ssd1306_clear_screen(dev, false);
-    ssd1306_contrast(dev, 0xff);
-}
+#include "sdkconfig.h"
+#include "u8g2_esp32_hal.h"
 
-static void init_screen(SSD1306_t *dev) {
 
-#if CONFIG_I2C_INTERFACE
-    ESP_LOGI(tag, "INTERFACE is i2c");
-    ESP_LOGI(tag, "CONFIG_SDA_GPIO=%d", CONFIG_SDA_GPIO);
-    ESP_LOGI(tag, "CONFIG_SCL_GPIO=%d", CONFIG_SCL_GPIO);
-    ESP_LOGI(tag, "CONFIG_RESET_GPIO=%d", CONFIG_RESET_GPIO);
-    i2c_master_init(dev, CONFIG_SDA_GPIO, CONFIG_SCL_GPIO, CONFIG_RESET_GPIO);
-#endif // CONFIG_I2C_INTERFACE
+static const char *TAG = "main";
 
-#if CONFIG_SPI_INTERFACE
-    ESP_LOGI(tag, "INTERFACE is SPI");
-    ESP_LOGI(tag, "CONFIG_MOSI_GPIO=%d",CONFIG_MOSI_GPIO);
-    ESP_LOGI(tag, "CONFIG_SCLK_GPIO=%d",CONFIG_SCLK_GPIO);
-    ESP_LOGI(tag, "CONFIG_CS_GPIO=%d",CONFIG_CS_GPIO);
-    ESP_LOGI(tag, "CONFIG_DC_GPIO=%d",CONFIG_DC_GPIO);
-    ESP_LOGI(tag, "CONFIG_RESET_GPIO=%d",CONFIG_RESET_GPIO);
-    spi_master_init(&dev, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO, CONFIG_DC_GPIO, CONFIG_RESET_GPIO);
-#endif // CONFIG_SPI_INTERFACE
-
-#if CONFIG_FLIP
-    dev._flip = true;
-    ESP_LOGW(tag, "Flip upside down");
-#endif
-
-    ESP_LOGI(tag, "Panel is 128x64");
-    ssd1306_init(dev, 128, 64);
-
-    reset_screen(dev);
-}
 
 void app_main(void) {
-    SSD1306_t dev;
-    char lineChar[20];
+    ESP_LOGD(TAG, "app_main started");
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(nvs_flash_init());
 
-    init_screen(&dev);
-    reset_screen(&dev);
+    wifi_init_sta();
 
-    ssd1306_software_scroll(&dev, 0, (dev._pages - 1));
-    for (int line = 0; line < 100; line++) {
-        sprintf(lineChar, "Line %02d", line);
-        ssd1306_scroll_text(&dev, lineChar, strlen(lineChar), false);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+    u8g2_t screen;
+    init_screen(&screen);
+
+    const char *options[] = {
+            "First entry",
+            "Second entry",
+            "Third entry",
+    };
+
+    menu_items_t items = {
+            .items = options,
+            .selected = 0,
+            .count = 3,
+    };
+
+    while (true) {
+        show_menu_items(&screen, &items);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+        items.selected += 1;
+        items.selected %= items.count;
     }
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
 
-    // Restart module
-    esp_restart();
+//    while (true) {
+//        ESP_LOGI(TAG, "Start scanning nearby APs...");
+//        wifictl_scan_nearby_aps();
+//
+//        const wifictl_ap_records_t *ap_records;
+//        ap_records = wifictl_get_ap_records();
+//
+//        // 33 SSID + 6 BSSID + 1 RSSI
+//        char resp_chunk[40];
+//        ssd1306_software_scroll(&screen, 0, (screen._pages - 1));
+//
+//        for (unsigned i = 0; i < ap_records->count; i++) {
+//            memcpy(resp_chunk, ap_records->records[i].ssid, 33);
+//            memcpy(&resp_chunk[33], ap_records->records[i].bssid, 6);
+//            memcpy(&resp_chunk[39], &ap_records->records[i].rssi, 1);
+//
+//            ssd1306_scroll_text(&screen, resp_chunk, 40, false);
+//        }
+//        vTaskDelay(10000 / portTICK_PERIOD_MS);
+//    }
 }

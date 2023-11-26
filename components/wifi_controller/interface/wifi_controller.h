@@ -24,6 +24,8 @@
  */
 void wifictl_ap_start(wifi_config_t *wifi_config);
 
+void wifi_init_sta();
+
 /**
  * @brief Stops running AP
  * 

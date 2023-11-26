@@ -1,0 +1,10 @@
+menu "U8G2 Configuration"
+
+	config I2C_ADDRESS
+		hex "Screen I2C address"
+		default 0x3C
+		help
+			I2C address of the device used as screen.
+
+endmenu
+
